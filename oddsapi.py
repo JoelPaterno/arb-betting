@@ -34,8 +34,11 @@ for response in responses:
     print("\n\n")
     best_home_company = ""
     best_away_company = ""
-    best_home = 0
-    best_away = 0
+    best_draw_company = ""
+    best_home = 1
+    best_away = 1
+    best_draw = 1
+    draw = False
     print("Home Team: " + response["home_team"])
     print("Away Team: " + response["away_team"])
     for bookmaker in response["bookmakers"]:
@@ -49,17 +52,25 @@ for response in responses:
                 elif line["outcomes"][1]["price"] > best_away:
                     best_away_company = bookmaker["title"]
                     best_away = line["outcomes"][1]["price"]
+                elif len(line["outcomes"]) == 3 and line["outcomes"][2]["price"] > best_draw:
+                    draw = True
+                    best_draw_company = bookmaker["title"]
+                    best_draw = line["outcomes"][2]["price"]
                 for i in range(n):
                     print(line["outcomes"][i]["name"] + " " + str(line["outcomes"][i]["price"]))
     
-    print("\nBest Home: " + str(best_home) + response["home_team"] + " To Win (" + best_home_company + ")")
-    print("Best Away: " + str(best_away) + response["away_team"] + " To Win (" + best_away_company + ")")
+    print("\nBest Home: " + str(best_home) + " " + response["home_team"] + " To Win (" + best_home_company + ")")
+    print("Best Away: " + str(best_away) + " " + response["away_team"] + " To Win (" + best_away_company + ")")
     print("\n")
 
     prob_home = (1/best_home) * 100
     prob_away = (1/best_away) * 100
+    if draw:
+        prob_draw = (1/best_draw) * 100
     print("Home probability: " + str(prob_home))
-    print("Away probability: " + str(prob_away))    
+    print("Away probability: " + str(prob_away)) 
+    if draw:   
+        print("Draw probability: " + str(prob_draw))
     print("\nCombined Market Margin: " + str(prob_home + prob_away) + "\n")
 
     combined = prob_home + prob_away
