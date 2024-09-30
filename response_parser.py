@@ -39,7 +39,6 @@ class Event:
                         self.home_lay = market.outcomes[0].price
                     if self.away_lay is None:
                         self.away_lay = market.outcomes[1].price
-
     def display_best_odds(self):
         """Displays the best odds for home and away teams."""
         print(f"\nBest Home Odds: {self.best_home_odds} for {self.home_team} (Bookmaker: {self.best_home_bookmaker}) (Betfair Lay : {self.home_lay})")
