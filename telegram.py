@@ -1,12 +1,19 @@
-import requests
+from dotenv import load_dotenv
+import os
+import telebot
 
-url = "https://api.telegram.org/bottoken/getMe"
+load_dotenv()
 
-headers = {
-    "accept": "application/json",
-    "User-Agent": "Telegram Bot SDK - (https://github.com/irazasyed/telegram-bot-sdk)"
-}
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-response = requests.post(url, headers=headers)
+bot = telebot.TeleBot(BOT_TOKEN)
 
-print(response.text)
+@bot.message_handler(commands=['start', 'hello'])
+def send_welcome(message):
+    bot.reply_to(message, "Howdy, how are you doing?")
+
+@bot.message_handler(commands=['markets'])
+def sign_handler(message):
+    bot.reply_to(message)
+
+bot.infinity_polling()
