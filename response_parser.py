@@ -1,4 +1,4 @@
-from oddsapi import get_events
+from oddsapi import get_events, get_available_sports
 #parseing the json into objects, functions for finding useful information can be found in the Events Class
 class Event:
     def __init__(self, id: str, sport_key: str, sport_title: str, commence_time: str, home_team: str, away_team: str, bookmakers: list):
@@ -10,6 +10,7 @@ class Event:
         self.away_team = away_team
         self.bookmakers = bookmakers
 
+        #Attributes to be set by class functions
         self.best_home_odds = None
         self.best_away_odds = None
         self.best_home_bookmaker = None
@@ -66,6 +67,69 @@ class Outcome:
         self.price = price
     def __repr__(self):
         return f"Outcome({self.name}, {self.price})\n"
+
+class MatchedBettingCalculator:
+    def __init__(self, event: Event, free_bet: float, home: bool):
+        self.event = event
+        self.home = home
+        self.free_bet = free_bet
+        self.commission = 0.05
+        self.combined_prob = None
+        if self.home:
+            self.back_stake = free_bet
+            self.back_bet_odds = event.best_home_odds 
+            self.lay_bet_odds = event.home_lay
+        else:
+            self.back_stake = free_bet
+            self.back_bet_odds = event.best_away_odds
+            self.lay_bet_odds = event.away_lay
+        
+        #attributes to be set by class functions
+        self.lay_stake = None
+        self.back_bet_win_profit = None
+        self.lay_bet_win_profit = None
+        self.final_profit_qualbet = None
+
+    def __repr__(self):
+        return f"Matched Bet(Home: {self.home}, Free Bet: {self.free_bet}, Back Stake: {self.back_stake}, Lay Stake: {self.lay_stake}, Back Bet Odds: {self.back_bet_odds}, Lay Bet Odds: {self.lay_bet_odds})\n"
+
+    def calc_combined_prob(self):
+        if self.back_bet_odds and self.lay_bet_odds:
+            outcome1_prob = 1 /self.back_bet_odds * 100
+            outcome2_prob = 1 /self.lay_bet_odds * 100
+        self.combined_prob = outcome1_prob + outcome2_prob
+    def calc_lay_stake(self):
+        self.lay_stake = (self.back_bet_odds * self.back_stake) / (self.lay_bet_odds - self.commission)
+    def display_combined_prob(self):
+        print(f"Combined Probability: {self.combined_prob}")
+    def display_lay_stake(self):
+        print(f"Lay Stake: {self.lay_stake}")
+    
+    #functions to calculate and display profit for qulaifying bet
+    def calc_lay_stake(self):
+        self.lay_stake = (self.back_bet_odds * self.back_stake) / (self.lay_bet_odds - self.commission)
+    def calc_back_bet_win_profit(self):
+        self.back_bet_win_profit = (self.back_stake * (self.back_bet_odds - 1)) - (self.lay_stake * (self.lay_bet_odds - 1))
+    
+    def calc_lay_bet_win_profit(self):
+        self.lay_bet_win_profit = (self.lay_stake * (1 - self.commission)) - self.back_stake
+    
+    def calc_final_profit_qualbet(self):
+        self.final_profit_qualbet = (self.lay_stake * (1 - self.commission)) - self.back_stake
+
+    def calculate_qualbet(self):
+        self.calc_lay_stake()
+        self.calc_back_bet_win_profit()
+        self.calc_lay_bet_win_profit()
+        self.calc_final_profit_qualbet()
+    def display_final_profit_qualbet(self):
+        print(f"Final Profit: {self.final_profit_qualbet: 2f}, Back Bet Profit: {self.back_bet_win_profit: 2f}, Lay Bet Profit: {self.lay_bet_win_profit: 2f}, Lay Stake: {self.lay_stake: 2f}")
+    
+    #functions to claculate and display profit for the  free bet Stake Not Returned (SNR)
+
+    #functions to calculate and display the profit for the free bet Stake Returned (SR)
+
+    
 #functions to build the objects
 def create_events(event_json: dict):
     return Event(event_json["id"], event_json["sport_key"], event_json["sport_title"], event_json["commence_time"], event_json["home_team"], event_json["away_team"], create_bookmakers(event_json["bookmakers"]))
@@ -76,19 +140,32 @@ def create_markets(market_json: dict):
 def create_outcomes(outcome_json: dict):
     return [Outcome(outcome["name"], outcome["price"]) for outcome in outcome_json]
 #this will parse the json sports events into python objects
-sports = ["basketball_nba"]
+sports = get_available_sports()
 
 response = get_events(sports)
 
-nba_response = response[0]
+for sport_response in response:
 
-nba_events = [create_events(event) for event in nba_response]
+    sport_events = [create_events(event) for event in sport_response]
 
-for event in nba_events:
-    event.find_best_odds()
-    event.display_best_odds()
-
-
-    
+    for event in sport_events:
+        event.find_best_odds()
+        
+        calchomewin = MatchedBettingCalculator(event, 100, True)
+        calcawaywin = MatchedBettingCalculator(event, 100, False)
+        calchomewin.calc_combined_prob()
+        calcawaywin.calc_combined_prob()
+        calcawaywin.calc_lay_stake()
+        calchomewin.calc_lay_stake()
+        if calchomewin.combined_prob < 100 and calchomewin.combined_prob > 70:
+            print("home win: ")
+            calchomewin.display_combined_prob()
+            event.display_best_odds()
+            print("lay stake: " + str(calchomewin.lay_stake))
+        elif calcawaywin.combined_prob < 100 and calcawaywin.combined_prob > 70:
+            print("away win: ")
+            calcawaywin.display_combined_prob()
+            event.display_best_odds()
+            print("lay stake: " + str(calcawaywin.lay_stake))
 
 
