@@ -15,6 +15,7 @@ def get_available_sports() -> list:
         sports = requests.get(f"https://api.the-odds-api.com//v4/sports?apiKey={apiKey}")
         sports_json = sports.json()
     except Exception as e:
+        print("error getting available sports")
         print(e)
     return sports_json
 
@@ -30,8 +31,13 @@ def get_events(sports: list) -> list:
 
             responses.append(response.json())
         except Exception as e:
+            print("error getting events")
             print(e)
-    with open("responses.txt", "w") as f:
-        f.write(str(responses))
+    try:
+        with open("responses.txt", "w") as f:
+            f.write(str(responses))
+    except Exception as e:
+        print("error writing to file")
+        print(e)
     return responses
 

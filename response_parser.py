@@ -13,8 +13,10 @@ class Event:
         #Attributes to be set by class functions
         self.best_home_odds = None
         self.best_away_odds = None
+        self.best_draw_odds = None
         self.best_home_bookmaker = None
         self.best_away_bookmaker = None
+        self.best_draw_bokmaker = None
         self.away_lay = None
         self.home_lay = None
     def __repr__(self):
@@ -25,16 +27,21 @@ class Event:
                 if market.key == "h2h":
                     home_outcome = market.outcomes[0]  # Assuming outcomes[0] is always home team
                     away_outcome = market.outcomes[1]  # Assuming outcomes[1] is always away team
-                    
+                    if len(market.outcomes) > 2:
+                        draw_outcome = market.outcomes[2]  # Assuming outcomes[2] is always draw
+                        if self.best_draw_odds is None or draw_outcome.price > self.best_draw_odds: 
+                            self.best_draw_odds = draw_outcome.price
+                            self.best_draw_bokmaker = bookmaker.title
                     # Check and store best home team odds
                     if self.best_home_odds is None or home_outcome.price > self.best_home_odds:
                         self.best_home_odds = home_outcome.price
                         self.best_home_bookmaker = bookmaker.title
-                    
                     # Check and store best away team odds
                     if self.best_away_odds is None or away_outcome.price > self.best_away_odds:
                         self.best_away_odds = away_outcome.price
                         self.best_away_bookmaker = bookmaker.title
+                    # Check and store best draw odds
+                    
                 if market.key == "h2h_lay":
                     if self.home_lay is None:
                         self.home_lay = market.outcomes[0].price
@@ -42,8 +49,9 @@ class Event:
                         self.away_lay = market.outcomes[1].price
     def display_best_odds(self):
         """Displays the best odds for home and away teams."""
-        print(f"\nBest Home Odds: {self.best_home_odds} for {self.home_team} (Bookmaker: {self.best_home_bookmaker}) (Betfair Lay : {self.home_lay})")
-        print(f"Best Away Odds: {self.best_away_odds} for {self.away_team} (Bookmaker: {self.best_away_bookmaker}) (Betfair Lay : {self.away_lay})")
+        print(f"\nBest Home Odds: {self.best_home_odds} for {self.home_team} (Bookmaker: {self.best_home_bookmaker})")
+        print(f"Best Away Odds: {self.best_away_odds} for {self.away_team} (Bookmaker: {self.best_away_bookmaker})")
+        print(f"Best Draw Odds: {self.best_draw_odds} (Bookmaker: {self.best_draw_bokmaker})")
 class Bookmaker:
     def __init__(self, key: str, title: str, last_update: str, markets: list):
         self.key = key
@@ -69,41 +77,42 @@ class Outcome:
         return f"Outcome({self.name}, {self.price})\n"
 
 class MatchedBettingCalculator:
-    def __init__(self, event: Event, free_bet: float, home: bool):
+    def __init__(self, event: Event, free_bet: float):
         self.event = event
-        self.home = home
         self.free_bet = free_bet
         self.commission = 0.05
         self.combined_prob = None
-        if self.home:
-            self.back_stake = free_bet
-            self.back_bet_odds = event.best_home_odds 
-            self.lay_bet_odds = event.home_lay
-        else:
-            self.back_stake = free_bet
-            self.back_bet_odds = event.best_away_odds
-            self.lay_bet_odds = event.away_lay
+        self.home_odds = event.best_home_odds
+        self.away_odds = event.best_away_odds
+        self.draw_odds = event.best_draw_odds
         
         #attributes to be set by class functions
-        self.lay_stake = None
-        self.back_bet_win_profit = None
-        self.lay_bet_win_profit = None
+        try:
+            self.home_prob = 1 / self.home_odds * 100
+        except Exception as e:
+            print("no home outcome")
+        try:
+            self.away_prob = 1 / self.away_odds * 100
+        except Exception as e:
+            print("no away outcome")
+        try:
+            self.draw_prob = 1 / self.draw_odds * 100
+        except Exception as e:
+            print("no draw outcome")
     def __repr__(self):
         return f"Matched Bet(Home: {self.home}, Free Bet: {self.free_bet}, Back Stake: {self.back_stake}, Lay Stake: {self.lay_stake}, Back Bet Odds: {self.back_bet_odds}, Lay Bet Odds: {self.lay_bet_odds})\n"
 
     def calc_combined_prob(self):
-        if self.back_bet_odds and self.lay_bet_odds:
-            outcome1_prob = 1 /self.back_bet_odds * 100
-            outcome2_prob = 1 /self.lay_bet_odds * 100
-            self.combined_prob = outcome1_prob + outcome2_prob
-    def calc_lay_stake(self):
-        self.lay_stake = (self.back_bet_odds * self.back_stake) / (self.lay_bet_odds - self.commission)
-    def calc_back_bet_win_profit(self):
-        self.back_bet_win_profit = ((self.back_bet_odds - 1) * self.back_stake) - ((self.lay_bet_odds - 1) * self.lay_stake)
-    def calc_lay_bet_win_profit(self):
-        self.lay_bet_win_profit = (self.lay_stake * (1 - self.commission)) - self.back_stake
+        if self.draw_odds is None:
+            self.combined_prob = self.home_prob + self.away_prob
+        else:
+            self.combined_prob = self.home_prob + self.away_prob + self.draw_prob
+    
     def display_combined_prob(self):
-        print(f"Combined Probability: {self.combined_prob} - Lay Stake: {self.lay_stake} - Back Bet Win Profit: {self.back_bet_win_profit} - lay Bet Win Profit: {self.lay_bet_win_profit}")
+        if self.draw_odds is None:
+            return print(f"Home Probability: {self.home_prob: 2f} -> Away Probability: {self.away_prob: 2f} -> Combined Probability: {self.combined_prob: 2f}")
+        else:
+            return print(f"Home Probability: {self.home_prob: 2f} -> Away Probability: {self.away_prob: 2f} -> Draw Probability: {self.draw_prob: 2f} -> Combined Probability: {self.combined_prob: 2f}")
 #functions to build the objects
 def create_events(event_json: dict):
     return Event(event_json["id"], event_json["sport_key"], event_json["sport_title"], event_json["commence_time"], event_json["home_team"], event_json["away_team"], create_bookmakers(event_json["bookmakers"]))
@@ -114,9 +123,9 @@ def create_markets(market_json: dict):
 def create_outcomes(outcome_json: dict):
     return [Outcome(outcome["name"], outcome["price"]) for outcome in outcome_json]
 #this will parse the json sports events into python objects
-#sports = get_available_sports()
 
-sports = ["americanfootball_nfl", "basketball_nba"]
+sports_json = get_available_sports()
+sports = [sport["key"] for sport in sports_json]
 response = get_events(sports)
 
 for sport_response in response:
@@ -126,24 +135,13 @@ for sport_response in response:
     for event in sport_events:
         event.find_best_odds()
         
-        calchomewin = MatchedBettingCalculator(event, 100, True)
-        calcawaywin = MatchedBettingCalculator(event, 100, False)
-        calchomewin.calc_combined_prob()
-        calcawaywin.calc_combined_prob()
-        calcawaywin.calc_lay_stake()
-        calchomewin.calc_lay_stake()
-        calchomewin.calc_back_bet_win_profit()
-        calchomewin.calc_lay_bet_win_profit()
-        calcawaywin.calc_back_bet_win_profit()
-        calcawaywin.calc_lay_bet_win_profit()
-        if calchomewin.combined_prob < 100 and calchomewin.combined_prob > 70:
+        calc = MatchedBettingCalculator(event, 100)
+        calc.calc_combined_prob()
+    
+        if calc.combined_prob < 100 and calc.combined_prob > 20:
             event.display_best_odds()
-            print("Home win Arbitrage: ")
-            calchomewin.display_combined_prob()
-        elif calcawaywin.combined_prob < 100 and calcawaywin.combined_prob > 70:
-            event.display_best_odds()
-            print("Away win Arbitrage: ")
-            calcawaywin.display_combined_prob()    
+            calc.display_combined_prob()
+    
             
 
 
