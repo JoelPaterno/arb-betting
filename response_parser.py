@@ -105,31 +105,6 @@ class MatchedBettingCalculator:
     def display_lay_stake(self):
         print(f"Lay Stake: {self.lay_stake}")
     
-    #functions to calculate and display profit for qulaifying bet
-    def calc_lay_stake(self):
-        self.lay_stake = (self.back_bet_odds * self.back_stake) / (self.lay_bet_odds - self.commission)
-    def calc_back_bet_win_profit(self):
-        self.back_bet_win_profit = (self.back_stake * (self.back_bet_odds - 1)) - (self.lay_stake * (self.lay_bet_odds - 1))
-    
-    def calc_lay_bet_win_profit(self):
-        self.lay_bet_win_profit = (self.lay_stake * (1 - self.commission)) - self.back_stake
-    
-    def calc_final_profit_qualbet(self):
-        self.final_profit_qualbet = (self.lay_stake * (1 - self.commission)) - self.back_stake
-
-    def calculate_qualbet(self):
-        self.calc_lay_stake()
-        self.calc_back_bet_win_profit()
-        self.calc_lay_bet_win_profit()
-        self.calc_final_profit_qualbet()
-    def display_final_profit_qualbet(self):
-        print(f"Final Profit: {self.final_profit_qualbet: 2f}, Back Bet Profit: {self.back_bet_win_profit: 2f}, Lay Bet Profit: {self.lay_bet_win_profit: 2f}, Lay Stake: {self.lay_stake: 2f}")
-    
-    #functions to claculate and display profit for the  free bet Stake Not Returned (SNR)
-
-    #functions to calculate and display the profit for the free bet Stake Returned (SR)
-
-    
 #functions to build the objects
 def create_events(event_json: dict):
     return Event(event_json["id"], event_json["sport_key"], event_json["sport_title"], event_json["commence_time"], event_json["home_team"], event_json["away_team"], create_bookmakers(event_json["bookmakers"]))
