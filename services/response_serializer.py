@@ -1,5 +1,7 @@
-from oddsapi import get_events, get_available_sports
-#parseing the json into objects, functions for finding useful information can be found in the Events Class
+#take the json input data and serilize it into arbitrage opportunity objects which can then be saved to the database in the daily task.
+
+from services.odds_api import get_events, get_available_sports
+#parsing the json into objects, functions for finding useful information can be found in the Events Class
 class Event:
     def __init__(self, id: str, sport_key: str, sport_title: str, commence_time: str, home_team: str, away_team: str, bookmakers: list):
         self.id = id
@@ -40,7 +42,6 @@ class Event:
                     if self.best_away_odds is None or away_outcome.price > self.best_away_odds:
                         self.best_away_odds = away_outcome.price
                         self.best_away_bookmaker = bookmaker.title
-                    # Check and store best draw odds
                     
                 if market.key == "h2h_lay":
                     if self.home_lay is None:
@@ -85,7 +86,7 @@ class MatchedBettingCalculator:
         self.home_odds = event.best_home_odds
         self.away_odds = event.best_away_odds
         self.draw_odds = event.best_draw_odds
-        
+        self.odds = [self.home_odds, self.away_odds, self.draw_odds]
         #attributes to be set by class functions
         try:
             self.home_prob = 1 / self.home_odds * 100
@@ -106,7 +107,7 @@ class MatchedBettingCalculator:
         if self.draw_odds is None:
             self.combined_prob = self.home_prob + self.away_prob
         else:
-            self.combined_prob = self.home_prob + self.away_prob + self.draw_prob
+            self.combined_prob = self.home_prob + self.away_prob + self.draw_pro
     
     def display_combined_prob(self):
         if self.draw_odds is None:
@@ -137,7 +138,7 @@ for sport_response in response:
         
         calc = MatchedBettingCalculator(event, 100)
         calc.calc_combined_prob()
-    
+
         if calc.combined_prob < 100 and calc.combined_prob > 20:
             event.display_best_odds()
             calc.display_combined_prob()

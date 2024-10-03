@@ -1,0 +1,26 @@
+version: '3'
+services:
+  bot:
+    build: .
+    container_name: arb_bot
+    environment:
+      - TELEGRAM_API_TOKEN=your-telegram-api-token
+      - ODDS_API_KEY=your-odds-api-key
+      - DATABASE_URL=postgresql://user:password@db/arb_db
+    volumes:
+      - .:/usr/src/app
+    depends_on:
+      - db
+
+  db:
+    image: postgres:latest
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: arb_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
